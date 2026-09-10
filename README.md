@@ -1,68 +1,61 @@
-# Attavo — supplier data validation & invoice automation for Workday
+# Attavo — Interactive Demo
 
-An internal prototype concept: two working apps plus a landing page, framed as a Workday-native
-capability with a roadmap to integrate with **Workday Financials** and **Workday HCM**.
+A self-contained, browser-only demo of **Attavo**: supplier-data validation (fraud /
+sanctions / bank verification) and touchless invoice processing. Two products, one
+platform, built to plug into Workday.
 
-## Easiest way to run — fully offline, no npm, no CDN
+**No backend, no database, no sign-in.** The real validation engine (ABA/IBAN
+checksums, fuzzy watchlist screening, PO matching, tax/math reconciliation, risk
+scoring) runs entirely in your browser against a large, pre-seeded, fictional dataset.
+Everything is clickable and drills down.
 
-Just double-click these. They open in your browser and run with **zero network access** — React and
-all libraries are compiled and bundled directly into the file:
+> Prototype on fictional data — not live sanctions clearance.
 
-- `index.html` — landing / overview page
-- `data-assure.html` — supplier data validation & fraud-prevention app
-- `invoice-ai.html` — touchless invoice-processing app
+## Demo it on GitHub Pages (recommended)
 
-Nothing is fetched from a CDN, so a corporate proxy that blocks or inspects traffic can't break them.
-(The apps try to load their display fonts from Google when you're online, and fall back to your
-system fonts offline — the apps themselves need no network either way.)
+1. Create a new GitHub repository (Public is simplest for Pages; Private needs GitHub
+   Enterprise/Pro for Pages).
+2. Upload these files: on the empty repo page click **uploading an existing file**,
+   drag in the *contents* of this folder, and commit. (Or push with git.)
+3. Enable Pages: repo **Settings → Pages → Build and deployment → Source: GitHub
+   Actions**. Save.
+4. The included workflow (`.github/workflows/deploy.yml`) builds and deploys on every
+   push to `main`. Watch it under the **Actions** tab.
+5. When it finishes, your demo is live at
+   `https://<your-username>.github.io/<repo-name>/`
 
-These are the versions to use for a demo on a locked-down machine.
+No configuration needed — the build uses relative asset paths and hash-based routing,
+so it works at any repo name/subpath and deep links never 404.
 
-## Editing the source (optional, needs the dev toolchain)
-
-The `.jsx` files are the source (single-file React components, `export default function App()`).
-To change and rebuild them:
+## Run it locally
 
 ```bash
-npm create vite@latest paylane-demo -- --template react
-cd paylane-demo            # IMPORTANT: the previous command made this subfolder
 npm install
-npm install lucide-react recharts
-# copy data-assure.jsx (or invoice-ai.jsx) into src/ and import it in src/main.jsx:
-#   import App from './data-assure.jsx'
-npm run dev                # or `npm run build` for your own bundled dist/
+npm run dev       # http://localhost:5173
 ```
 
-### If npm fails with a certificate error (corporate proxy)
-
-`UNABLE_TO_GET_ISSUER_CERT_LOCALLY` means a TLS-inspecting proxy is intercepting HTTPS and Node
-doesn't trust the corporate root CA. Point Node at your machine's trusted roots (macOS):
-
+Build a static bundle yourself:
 ```bash
-security find-certificate -a -p /Library/Keychains/System.keychain > ~/corp-ca.pem
-security find-certificate -a -p /System/Library/Keychains/SystemRootCertificates.keychain >> ~/corp-ca.pem
-export NODE_EXTRA_CA_CERTS=~/corp-ca.pem      # add to ~/.zshrc to persist
+npm run build     # outputs to dist/  (open with any static server)
 ```
 
-Then npm and the Vite dev server work. Quick-but-insecure alternative:
-`npm config set strict-ssl false`, run your install, then `npm config set strict-ssl true`.
+## What to click
+- **Dashboard** — every KPI tile and status chip is clickable.
+- **Suppliers** — Onboard one (try "Volkov Metals Trading LLC" to trip screening);
+  click any row for the detail drawer (Overview / Findings / Screening / History).
+- **Invoices** — Capture, paste text, Extract, Submit & validate; drill into any row.
+- **Exceptions** — adjudicate screening matches (AI suggest) and clear invoice holds.
+- **Assistant** — ask "Which suppliers are flagged?" / "What's on hold?"
+- **Settings** — thresholds that actually drive the engine.
 
-(You don't need any of this just to run the demo — the `.html` files above already work standalone.)
+## How it works
+- `src/engine/domain.ts` — pure checksum / name-match / money primitives
+- `src/engine/rules.ts` — the validation rules engine (same logic as the full product)
+- `src/engine/store.ts` — in-memory data + operations + metrics
+- `src/engine/seed.ts` — generates the fictional dataset through the real engine
+- `src/api/client.ts` — a browser mock of the REST API the UI would normally call
 
-## About the AI features
+To turn this into the full product, swap `src/api/client.ts` for real HTTP calls to the
+Attavo API (Fastify + Prisma + Postgres) — the UI components are unchanged.
 
-Each app has real Claude-powered features (Verify: Procurement Assistant + sanctions
-adjudication; Invoices: field extraction + Invoice Assistant + exception suggestions). Inside
-Claude they call Claude live; run standalone (the `.html` files) they fall back to built-in offline
-logic, so every screen still works — just not live AI. Never put an API key in the frontend to "fix"
-this; that leaks the key and needs a small server proxy.
-
-## What's real vs. simulated
-
-Functional: validation logic, ABA routing + IBAN checksums (Verify), PO matching, tax and
-invoice-math validation, duplicate detection, fuzzy name/sanctions matching, and the AI. Simulated:
-writing back into Workday, the live government/banking/tax feeds, and the sanctions watchlist
-(fictional sample entities).
-
-*Attavo is an internal prototype concept, not a shipping product. Workday, Workday Financials, and
-Workday HCM are trademarks of Workday, Inc.*
+Data resets on refresh (it lives in memory), which is ideal for repeatable demos.
